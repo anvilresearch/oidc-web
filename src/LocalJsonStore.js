@@ -1,14 +1,16 @@
 'use strict'
 
 class LocalJsonStore {
-  constructor (namespace, options) {
+  constructor (namespace, options = {}) {
     this.namespace = namespace
     this.className = options.className
     this.store = options.store || global.localStorage
   }
 
   get (key) {
-    let contents = this.store.getItem(this.namespace + key)
+    key = key ? `${this.namespace}.${key}` : this.namespace
+
+    let contents = this.store.getItem(key)
 
     try {
       contents = JSON.parse(contents)
@@ -16,17 +18,22 @@ class LocalJsonStore {
       return Promise.resolve(null)
     }
 
-    if (this.className) {
-      return this.className.from(contents)  // async, resolve with instance
-    } else {
-      return Promise.resolve(contents)      // resolve with the raw JSON
-    }
+    return Promise.resolve()
+      .then(() => {
+        if (!this.className) {
+          return contents  // resolve with raw JSON
+        }
+
+        return this.className.from(contents)  // resolve with instance
+      })
   }
 
   save (key, value) {
+    key = key ? `${this.namespace}.${key}` : this.namespace
+
     let contents = JSON.stringify(value)
 
-    this.store.setItem(this.namespace + key, contents)
+    this.store.setItem(key, contents)
 
     return Promise.resolve(value)  // async only to match get()
   }
