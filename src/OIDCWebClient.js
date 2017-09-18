@@ -1,31 +1,68 @@
 'use strict'
 
 const RelyingParty = require('@trust/oidc-rp')
+const Session = require('./Session')
+const storage = require('./storage')
+// const fetch = require('whatwg-fetch')
 
 class OIDCWebClient {
   /**
    * @constructor
    *
-   * @param provider {string} Provider (issuer) URL
-   * @param clients {LocalJsonStore<RP>} Relying Party registration store
-   * @param session {LocalJsonStore<Session>} Session store
-   * @param defaults {Object} Relying Party registration defaults
-   * @param store {LocalStorage} Storage to pass to RP instances
+   * @param [options={}] {Object}
+   * @param options.provider {string} Provider (issuer) URL
+   * @param options.clients {LocalJsonStore<RelyingParty>} Relying Party registration store
+   * @param options.session {LocalJsonStore<Session>} Session store
+   * @param options.defaults {Object} Relying Party registration defaults
+   * @param options.store {LocalStorage} Storage to pass to RP instances
    */
-  constructor ({ provider, clients, session, defaults, store }) {
-    defaults = defaults || {}
-    this.defaults = defaults
-    this.clients = clients
-    this.session = session
-    this.provider = provider || defaults.issuer
-    this.store = store || global.localStorage
+  constructor (options = {}) {
+    this.defaults = options.defaults || {}
+
+    this.provider = options.provider || this.defaults.issuer || null
+
+    this.store = options.store || storage.defaultStore()
+
+    this.clients = options.clients || storage.defaultClientStore(this.store)
+    this.session = options.session || storage.defaultSessionStore(this.store)
   }
 
   currentSession () {
+    return this.session.get()
+      .then(session => session || this.sessionFromResponse())
+      .then(session => session || this.emptySession())
   }
 
   login (provider, options = {}) {
+    return Promise.resolve(provider)
+      // .then(provider => provider || this.selectProviderUI())
+      .then(provider => this.rpFor(provider, options))
+      .then(rp => this.sendAuthRequest(rp))
   }
+
+  logout () {
+    // send a logout request to the RP
+    this.clients.clear()
+    this.session.clear()
+  }
+
+  sessionFromResponse () {
+    // determine if current url has an authentication response,
+    // init and return a session if so
+  }
+
+  emptySession () {
+    // empty session, user is not logged in, plain fetch
+    return Session.from()
+  }
+
+  /**
+   * Open a Select Provider popup
+   * @returns {Promise}
+   */
+  // selectProviderUI () {
+  //   return Promise.resolve(null)
+  // }
 
   /**
    * @param provider {string} Provider (issuer) url
@@ -92,6 +129,25 @@ class OIDCWebClient {
   }
 
   /**
+   * @param rp {RelyingParty}
+   *
+   * @return {Promise}
+   */
+  sendAuthRequest (rp) {
+    let options = {}
+    // let providerUri = rp.provider.url
+
+    return rp.createRequest(options, this.store)
+      .then(authUri => {
+        // let state = this.extractState(authUri, QUERY)
+
+        // this.saveProviderByState(state, providerUri)
+
+        return this.redirectTo(authUri)
+      })
+  }
+
+  /**
    * Returns the current window's URI
    *
    * @return {string|null}
@@ -102,6 +158,21 @@ class OIDCWebClient {
     if (!window || !window.location) { return null }
 
     return window.location.href
+  }
+
+  /**
+   * Redirects the current window to the given uri.
+   *
+   * Note: the `return false` is due to odd Chrome requirement/quirk
+   *
+   * @param uri {string}
+   */
+  redirectTo (uri) {
+    if (typeof window === 'undefined') { return null }
+
+    window.location.href = uri
+
+    return false
   }
 }
 
