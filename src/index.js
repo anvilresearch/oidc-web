@@ -1,7 +1,4 @@
-'use strict'
-
-class OIDCWebClient {
-
+module.exports = {
+  'OIDCWebClient': require('./OIDCWebClient'),
+  'LocalJsonStore': require('./LocalJsonStore')
 }
-
-module.exports = OIDCWebClient
