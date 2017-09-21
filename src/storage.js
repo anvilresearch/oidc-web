@@ -5,9 +5,10 @@ const LocalJsonStore = require('./LocalJsonStore')
 const Session = require('./Session')
 
 module.exports = {
-  defaultStore,
   defaultClientStore,
-  defaultSessionStore
+  defaultProviderStore,
+  defaultSessionStore,
+  defaultStore
 }
 
 function defaultStore () {
@@ -26,6 +27,21 @@ function defaultSessionStore (store) {
   return new LocalJsonStore({
     className: Session,
     namespace: 'oidc.session',
+    store: store || defaultStore()
+  })
+}
+
+/**
+ * Store Provider URIs by state param
+ *
+ * @param store
+ *
+ * @returns {LocalJsonStore}
+ */
+function defaultProviderStore (store) {
+  return new LocalJsonStore({
+    className: Session,
+    namespace: 'oidc.providers',
     store: store || defaultStore()
   })
 }
