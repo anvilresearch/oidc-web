@@ -5,6 +5,10 @@ const Session = require('./Session')
 const storage = require('./storage')
 // const fetch = require('whatwg-fetch')
 
+// URI parameter types
+const HASH = 'hash'
+const QUERY = 'query'
+
 class OIDCWebClient {
   /**
    * @constructor
@@ -25,6 +29,7 @@ class OIDCWebClient {
 
     this.clients = options.clients || storage.defaultClientStore(this.store)
     this.session = options.session || storage.defaultSessionStore(this.store)
+    this.providers = options.providers || storage.defaultProviderStore(this.store)
   }
 
   currentSession () {
@@ -135,16 +140,43 @@ class OIDCWebClient {
    */
   sendAuthRequest (rp) {
     let options = {}
-    // let providerUri = rp.provider.url
+    let providerUri = rp.provider.url
 
     return rp.createRequest(options, this.store)
       .then(authUri => {
-        // let state = this.extractState(authUri, QUERY)
+        let state = this.extractState(authUri, QUERY)
 
-        // this.saveProviderByState(state, providerUri)
+        this.providers.save(state, providerUri)  // save provider by state
 
         return this.redirectTo(authUri)
       })
+  }
+
+  /**
+   * Extracts and returns the `state` query or hash fragment param from a uri
+   *
+   * @param uri {string}
+   * @param uriType {string} 'hash' or 'query'
+   *
+   * @return {string|null} Value of the `state` query or hash fragment param
+   */
+  extractState (uri, uriType = HASH) {
+    if (!uri) { return null }
+
+    let uriObj = new URL(uri)
+    let state
+
+    if (uriType === HASH) {
+      let hash = uriObj.hash || '#'
+      let params = new URLSearchParams(hash.substr(1))
+      state = params.get('state')
+    }
+
+    if (uriType === QUERY) {
+      state = uriObj.searchParams.get('state')
+    }
+
+    return state
   }
 
   /**
