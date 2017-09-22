@@ -1,9 +1,8 @@
 'use strict'
 
 const RelyingParty = require('@trust/oidc-rp')
-const Session = require('./Session')
+const Session = require('@trust/oidc-rp/lib/Session')
 const storage = require('./storage')
-// const fetch = require('whatwg-fetch')
 
 // URI parameter types
 const { QUERY } = require('./browser')
@@ -48,7 +47,7 @@ class OIDCWebClient {
       .then(session => session || this.sessionFromResponse())
 
       // Failing that, return an empty session
-      .then(session => session || Session.empty())
+      .then(session => session || Session.from({}))
   }
 
   /**
@@ -68,7 +67,7 @@ class OIDCWebClient {
   }
 
   logout () {
-    // send a logout request to the RP
+    // TODO: send a logout request to the RP
     this.clients.clear()
     this.session.clear()
   }
@@ -76,17 +75,20 @@ class OIDCWebClient {
   /**
    * sessionFromResponse
    *
-   * @returns {Promise<Session>|Promise<null>}
+   * @description
+   * Determines if the current url has an authentication response in its
+   * hash fragment, and initializes a session from it if present.
+   * Resolves with an empty session otherwise.
+   *
+   * @returns {Promise<Session|null>}
    */
   sessionFromResponse () {
-    // determine if current url has an authentication response
     if (!this.browser.currentUriHasAuthResponse()) {
       return Promise.resolve(null)
     }
 
     let responseUri = this.browser.currentLocation()
 
-    // init and return a session if so
     let state = this.browser.stateFromUri(responseUri)
 
     let provider = this.providers.get(state)
@@ -94,8 +96,6 @@ class OIDCWebClient {
     return this.rpFor(provider)
 
       .then(rp => rp.validateResponse(responseUri, this.store))
-
-      .then(response => Session.from(response))
 
       .then(session => {
         this.browser.clearAuthResponseFromUrl()

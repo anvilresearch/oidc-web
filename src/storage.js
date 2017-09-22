@@ -2,7 +2,7 @@
 
 const RelyingParty = require('@trust/oidc-rp')
 const LocalJsonStore = require('./LocalJsonStore')
-const Session = require('./Session')
+const Session = require('@trust/oidc-rp/lib/Session')
 
 module.exports = {
   defaultClientStore,
