@@ -6,8 +6,7 @@ const storage = require('./storage')
 // const fetch = require('whatwg-fetch')
 
 // URI parameter types
-const HASH = 'hash'
-const QUERY = 'query'
+const { QUERY } = require('./browser')
 
 class OIDCWebClient {
   /**
@@ -27,6 +26,8 @@ class OIDCWebClient {
    */
   constructor (options = {}) {
     this.defaults = options.defaults || {}
+
+    this.browser = options.browser || require('./browser')
 
     this.provider = options.provider || this.defaults.issuer || null
 
@@ -53,7 +54,9 @@ class OIDCWebClient {
   login (provider, options = {}) {
     return Promise.resolve(provider)
       // .then(provider => provider || this.selectProviderUI())
+
       .then(provider => this.rpFor(provider, options))
+
       .then(rp => this.sendAuthRequest(rp))
   }
 
@@ -70,14 +73,14 @@ class OIDCWebClient {
    */
   sessionFromResponse () {
     // determine if current url has an authentication response
-    if (!this.currentUriHasAuthResponse()) {
+    if (!this.browser.currentUriHasAuthResponse()) {
       return Promise.resolve(null)
     }
 
-    let responseUri = this.currentLocation()
+    let responseUri = this.browser.currentLocation()
 
     // init and return a session if so
-    let state = this.extractState(responseUri)
+    let state = this.browser.stateFromUri(responseUri)
 
     let provider = this.providers.get(state)
 
@@ -88,7 +91,7 @@ class OIDCWebClient {
       .then(response => Session.from(response))
 
       .then(session => {
-        this.clearAuthResponseFromUrl()
+        this.browser.clearAuthResponseFromUrl()
 
         return this.session.save(session)  // returns session
       })
@@ -138,7 +141,7 @@ class OIDCWebClient {
    */
   registerPublicClient (provider, options = {}) {
     provider = provider || options.issuer
-    let redirectUri = options['redirect_uri'] || this.currentLocation()
+    let redirectUri = options['redirect_uri'] || this.browser.currentLocation()
 
     let registration = {
       issuer: provider,
@@ -181,108 +184,14 @@ class OIDCWebClient {
     let providerUri = rp.provider.url
 
     return rp.createRequest(options, this.store)
+
       .then(authUri => {
-        let state = this.extractState(authUri, QUERY)
+        let state = this.browser.stateFromUri(authUri, QUERY)
 
         this.providers.save(state, providerUri)  // save provider by state
 
-        return this.redirectTo(authUri)
+        return this.browser.redirectTo(authUri)
       })
-  }
-
-  /**
-   * Removes authentication response data (access token, id token etc) from
-   * the current url's hash fragment.
-   */
-  clearAuthResponseFromUrl () {
-    // TODO: Implement
-    let clearedUrl = this.currentLocation()
-
-    this.replaceCurrentUrl(clearedUrl)
-  }
-
-  /**
-   * Extracts and returns the `state` query or hash fragment param from a uri
-   *
-   * @param uri {string}
-   * @param uriType {string} 'hash' or 'query'
-   *
-   * @return {string|null} Value of the `state` query or hash fragment param
-   */
-  extractState (uri, uriType = HASH) {
-    if (!uri) { return null }
-
-    let uriObj = new URL(uri)
-    let state
-
-    if (uriType === HASH) {
-      let hash = uriObj.hash || '#'
-      let params = new URLSearchParams(hash.substr(1))
-      state = params.get('state')
-    }
-
-    if (uriType === QUERY) {
-      state = uriObj.searchParams.get('state')
-    }
-
-    return state
-  }
-
-  /**
-   * Returns the current window's URI
-   *
-   * @return {string|null}
-   */
-  currentLocation () {
-    if (typeof window === 'undefined') { return null }
-
-    if (!window || !window.location) { return null }
-
-    return window.location.href
-  }
-
-  /**
-   * Replaces the current document's URL (used to clear the credentials in
-   * the hash fragment after a redirect from the provider).
-   *
-   * @param newUrl {string|null}
-   */
-  replaceCurrentUrl (newUrl) {
-    if (typeof window === 'undefined') { return null }
-
-    let history = window.history
-
-    if (!history) { return null }
-
-    history.replaceState(history.state, history.title, newUrl)
-  }
-
-  /**
-   * Tests whether the current URI is the result of an AuthenticationRequest
-   * return redirect.
-   *
-   * @return {boolean}
-   */
-  currentUriHasAuthResponse () {
-    let currentUri = this.currentLocation()
-    let stateParam = this.extractState(currentUri, HASH)
-
-    return !!stateParam
-  }
-
-  /**
-   * Redirects the current window to the given uri.
-   *
-   * Note: the `return false` is due to odd Chrome requirement/quirk
-   *
-   * @param uri {string}
-   */
-  redirectTo (uri) {
-    if (typeof window === 'undefined') { return null }
-
-    window.location.href = uri
-
-    return false
   }
 }
 

@@ -98,7 +98,7 @@ describe('OIDCWebClient', () => {
     })
 
     it('should default the redirectUri to the current location', () => {
-      auth.currentLocation = sinon.stub().returns(currentLocation)
+      auth.browser.currentLocation = sinon.stub().returns(currentLocation)
 
       const expectedRegistration = {
         issuer: provider,
@@ -131,7 +131,7 @@ describe('OIDCWebClient', () => {
         provider, clients, session, store, defaults
       })
 
-      expect(auth.currentLocation()).to.equal(currentLocation)
+      expect(auth.browser.currentLocation()).to.equal(currentLocation)
     })
   })
 })
