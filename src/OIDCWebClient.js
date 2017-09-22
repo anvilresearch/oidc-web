@@ -48,9 +48,16 @@ class OIDCWebClient {
       .then(session => session || this.sessionFromResponse())
 
       // Failing that, return an empty session
-      .then(session => session || this.emptySession())
+      .then(session => session || Session.empty())
   }
 
+  /**
+   * @param provider {string} Provider URI
+   *
+   * @param [options={}] {object}
+   *
+   * @returns {Promise} Currently ends in a window redirect
+   */
   login (provider, options = {}) {
     return Promise.resolve(provider)
       // .then(provider => provider || this.selectProviderUI())
@@ -95,11 +102,6 @@ class OIDCWebClient {
 
         return this.session.save(session)  // returns session
       })
-  }
-
-  emptySession () {
-    // empty session, user is not logged in, plain fetch
-    return Session.from()
   }
 
   /**
