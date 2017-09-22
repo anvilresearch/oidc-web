@@ -14,10 +14,15 @@ class OIDCWebClient {
    * @constructor
    *
    * @param [options={}] {Object}
+   *
    * @param options.provider {string} Provider (issuer) URL
+   *
+   * @param options.defaults {Object} Relying Party registration defaults
+   *
    * @param options.clients {LocalJsonStore<RelyingParty>} Relying Party registration store
    * @param options.session {LocalJsonStore<Session>} Session store
-   * @param options.defaults {Object} Relying Party registration defaults
+   * @param options.providers {LocalJsonStore<string>} Stores provider URI by state
+   *
    * @param options.store {LocalStorage} Storage to pass to RP instances
    */
   constructor (options = {}) {
@@ -32,9 +37,16 @@ class OIDCWebClient {
     this.providers = options.providers || storage.defaultProviderStore(this.store)
   }
 
+  /**
+   * @returns {Promise<Session>}
+   */
   currentSession () {
-    return this.session.get()
+    return this.session.get()  // try loading a saved session
+
+      // If no session, attempt to parse it from authentication response
       .then(session => session || this.sessionFromResponse())
+
+      // Failing that, return an empty session
       .then(session => session || this.emptySession())
   }
 
@@ -51,9 +63,35 @@ class OIDCWebClient {
     this.session.clear()
   }
 
+  /**
+   * sessionFromResponse
+   *
+   * @returns {Promise<Session>|Promise<null>}
+   */
   sessionFromResponse () {
-    // determine if current url has an authentication response,
+    // determine if current url has an authentication response
+    if (!this.currentUriHasAuthResponse()) {
+      return Promise.resolve(null)
+    }
+
+    let responseUri = this.currentLocation()
+
     // init and return a session if so
+    let state = this.extractState(responseUri)
+
+    let provider = this.providers.get(state)
+
+    return this.rpFor(provider)
+
+      .then(rp => rp.validateResponse(responseUri, this.store))
+
+      .then(response => Session.from(response))
+
+      .then(session => {
+        this.clearAuthResponseFromUrl()
+
+        return this.session.save(session)  // returns session
+      })
   }
 
   emptySession () {
@@ -153,6 +191,17 @@ class OIDCWebClient {
   }
 
   /**
+   * Removes authentication response data (access token, id token etc) from
+   * the current url's hash fragment.
+   */
+  clearAuthResponseFromUrl () {
+    // TODO: Implement
+    let clearedUrl = this.currentLocation()
+
+    this.replaceCurrentUrl(clearedUrl)
+  }
+
+  /**
    * Extracts and returns the `state` query or hash fragment param from a uri
    *
    * @param uri {string}
@@ -190,6 +239,35 @@ class OIDCWebClient {
     if (!window || !window.location) { return null }
 
     return window.location.href
+  }
+
+  /**
+   * Replaces the current document's URL (used to clear the credentials in
+   * the hash fragment after a redirect from the provider).
+   *
+   * @param newUrl {string|null}
+   */
+  replaceCurrentUrl (newUrl) {
+    if (typeof window === 'undefined') { return null }
+
+    let history = window.history
+
+    if (!history) { return null }
+
+    history.replaceState(history.state, history.title, newUrl)
+  }
+
+  /**
+   * Tests whether the current URI is the result of an AuthenticationRequest
+   * return redirect.
+   *
+   * @return {boolean}
+   */
+  currentUriHasAuthResponse () {
+    let currentUri = this.currentLocation()
+    let stateParam = this.extractState(currentUri, HASH)
+
+    return !!stateParam
   }
 
   /**
