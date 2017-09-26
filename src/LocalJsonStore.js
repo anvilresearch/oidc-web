@@ -24,12 +24,21 @@ class LocalJsonStore {
           return contents  // resolve with raw JSON
         }
 
-        return this.className.from(contents)  // resolve with instance
+        if (contents) {
+          return this.className.from(contents || {})  // resolve with instance
+        } else {
+          return null
+        }
       })
   }
 
   save (key, value) {
-    key = key ? `${this.namespace}.${key}` : this.namespace
+    if (!value) {
+      value = key
+      key = this.namespace
+    } else {
+      key = key ? `${this.namespace}.${key}` : this.namespace
+    }
 
     let contents = JSON.stringify(value)
 

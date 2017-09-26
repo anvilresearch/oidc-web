@@ -16,17 +16,15 @@ function defaultStore () {
 }
 
 function defaultClientStore (store) {
-  return new LocalJsonStore({
+  return new LocalJsonStore('oidc.clients', {
     className: RelyingParty,
-    namespace: 'oidc.clients',
     store: store || defaultStore()
   })
 }
 
 function defaultSessionStore (store) {
-  return new LocalJsonStore({
+  return new LocalJsonStore('oidc.session', {
     className: Session,
-    namespace: 'oidc.session',
     store: store || defaultStore()
   })
 }
@@ -39,9 +37,7 @@ function defaultSessionStore (store) {
  * @returns {LocalJsonStore}
  */
 function defaultProviderStore (store) {
-  return new LocalJsonStore({
-    className: Session,
-    namespace: 'oidc.providers',
+  return new LocalJsonStore('oidc.providers', {
     store: store || defaultStore()
   })
 }
