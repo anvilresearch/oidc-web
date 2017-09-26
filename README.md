@@ -33,7 +33,7 @@ $ npm install @trust/oidc-web
 ## Usage
 
 ```js
-const OIDCWebClient = require('@trust/oidc-web')
+const { OIDCWebClient } = require('@trust/oidc-web')
 
 let auth = new OIDCWebClient({})
 
