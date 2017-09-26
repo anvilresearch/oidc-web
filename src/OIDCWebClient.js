@@ -44,10 +44,14 @@ class OIDCWebClient {
     return this.session.get()  // try loading a saved session
 
       // If no session, attempt to parse it from authentication response
-      .then(session => session || this.sessionFromResponse())
+      .then(session => {
+        return session || this.sessionFromResponse()
+      })
 
       // Failing that, return an empty session
-      .then(session => session || Session.from({}))
+      .then(session => {
+        return session || Session.from({})
+      })
   }
 
   /**
@@ -91,11 +95,15 @@ class OIDCWebClient {
 
     let state = this.browser.stateFromUri(responseUri)
 
-    let provider = this.providers.get(state)
+    return this.providers.get(state)
 
-    return this.rpFor(provider)
+      .then(provider => {
+        return this.rpFor(provider)
+      })
 
-      .then(rp => rp.validateResponse(responseUri, this.store))
+      .then(rp => {
+        return rp.validateResponse(responseUri, this.store)
+      })
 
       .then(session => {
         this.browser.clearAuthResponseFromUrl()
