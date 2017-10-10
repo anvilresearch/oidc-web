@@ -98,6 +98,10 @@ class OIDCWebClient {
     return this.providers.get(state)
 
       .then(provider => {
+        if (!provider) {
+          throw new Error('Could not load provider uri from response state param')
+        }
+
         return this.rpFor(provider)
       })
 
@@ -109,6 +113,12 @@ class OIDCWebClient {
         this.browser.clearAuthResponseFromUrl()
 
         return this.session.save(session)  // returns session
+      })
+
+      .catch(error => {
+        console.log(error)
+
+        return null
       })
   }
 

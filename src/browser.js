@@ -39,7 +39,9 @@ function currentLocationNoAuth () {
 
   if (!currentUrl.hash) { return currentUrl.toString() }  // nothing needs to be done
 
-  let hashFragments = currentUrl.hash.split('&')
+  let hashFragments = currentUrl.hash.slice(1)  // drop leading #
+
+  hashFragments = hashFragments.split('&')
 
   let authParams = [
     'id_token', 'access_token', 'state', 'token_type', 'expires_in'
