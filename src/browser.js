@@ -1,5 +1,7 @@
 'use strict'
 
+const { URL } = require('whatwg-url')
+
 // URI parameter types
 const HASH = 'hash'
 const QUERY = 'query'
@@ -7,6 +9,7 @@ const QUERY = 'query'
 module.exports = {
   clearAuthResponseFromUrl,
   currentLocation,
+  currentLocationNoAuth,
   currentUriHasAuthResponse,
   stateFromUri,
   redirectTo,
@@ -20,16 +23,42 @@ module.exports = {
  * the current url's hash fragment.
  */
 function clearAuthResponseFromUrl () {
-  // TODO: Implement
-  let clearedUrl = currentLocation()
+  let clearedUrl = currentLocationNoAuth()
 
   replaceCurrentUrl(clearedUrl)
 }
 
 /**
+ * Returns the current url with the authentication response hash fragments
+ * (containing access token, id token, state, etc) removed
+ *
+ * @returns {string}
+ */
+function currentLocationNoAuth () {
+  let currentUrl = new URL(currentLocation())
+
+  if (!currentUrl.hash) { return currentUrl.toString() }  // nothing needs to be done
+
+  let hashFragments = currentUrl.hash.split('&')
+
+  let authParams = [
+    'id_token', 'access_token', 'state', 'token_type', 'expires_in'
+  ]
+
+  hashFragments = hashFragments.filter(f => {
+    let fragmentKey = f.split('=')[0]
+    return !authParams.includes(fragmentKey)
+  })
+
+  currentUrl.hash = hashFragments.join('&')
+
+  return currentUrl.toString()
+}
+
+/**
  * Returns the current window's URI
  *
- * @return {string|null}
+ * @returns {string|null}
  */
 function currentLocation () {
   if (typeof window === 'undefined') { return null }
@@ -43,7 +72,7 @@ function currentLocation () {
  * Tests whether the current URI is the result of an AuthenticationRequest
  * return redirect.
  *
- * @return {boolean}
+ * @returns {boolean}
  */
 function currentUriHasAuthResponse () {
   let currentUri = currentLocation()
@@ -58,7 +87,7 @@ function currentUriHasAuthResponse () {
  * @param uri {string}
  * @param uriType {string} 'hash' or 'query'
  *
- * @return {string|null} Value of the `state` query or hash fragment param
+ * @returns {string|null} Value of the `state` query or hash fragment param
  */
 function stateFromUri (uri, uriType = HASH) {
   if (!uri) { return null }
