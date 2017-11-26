@@ -61,6 +61,7 @@ describe('OIDCWebClient', () => {
     const redirectUri = 'https://app.com/callback'
 
     const options = {
+      popToken: true,
       redirect_uri: redirectUri
     }
 
@@ -75,6 +76,7 @@ describe('OIDCWebClient', () => {
     const expectedRpOptions = {
       store,
       defaults: {
+        popToken: true,
         authenticate: {
           redirect_uri: redirectUri,
           response_type: 'id_token token'
@@ -84,7 +86,7 @@ describe('OIDCWebClient', () => {
 
     beforeEach(() => {
       auth = new OIDCWebClient({
-        provider, clients, session, store, defaults
+        provider, clients, session, store, defaults, popToken: true
       })
 
       auth.registerClient = sinon.stub().resolves()
@@ -111,6 +113,7 @@ describe('OIDCWebClient', () => {
       const expectedRpOptions = {
         store,
         defaults: {
+          popToken: true,
           authenticate: {
             redirect_uri: currentLocation,
             response_type: 'id_token token'
