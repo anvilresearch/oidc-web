@@ -13,6 +13,8 @@ class OIDCWebClient {
    *
    * @param [options={}] {Object}
    *
+   * @param options.popToken {boolean} Use PoP token semantics
+   *
    * @param options.provider {string} Provider (issuer) URL
    *
    * @param options.defaults {Object} Relying Party registration defaults
@@ -24,6 +26,8 @@ class OIDCWebClient {
    * @param options.store {LocalStorage} Storage to pass to RP instances
    */
   constructor (options = {}) {
+    this.popToken = options.popToken || options.solid  // accept 'solid' alias
+
     this.defaults = options.defaults || {}
 
     this.browser = options.browser || require('./browser')
@@ -136,7 +140,7 @@ class OIDCWebClient {
    *
    * @returns {Promise<RelyingParty>}
    */
-  rpFor (provider, options) {
+  rpFor (provider, options = {}) {
     return this.clients.get(provider)
       .then(rp => rp || this.register(provider, options))
   }
@@ -173,6 +177,7 @@ class OIDCWebClient {
 
     let rpOptions = {
       defaults: {
+        popToken: this.popToken,
         authenticate: {
           redirect_uri: redirectUri,
           response_type: 'id_token token'
