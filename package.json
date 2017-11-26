@@ -58,7 +58,7 @@
     }
   ],
   "dependencies": {
-    "@trust/oidc-rp": "^0.5.0"
+    "@trust/oidc-rp": "^0.6.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
